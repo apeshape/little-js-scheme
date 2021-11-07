@@ -1,15 +1,5 @@
-const {
-  getInner,
-  trim,
-  isAtom,
-  getType,
-  listify,
-  // convertToScm,
-} = require("./helpers");
-const globalScope = require("./globalScope");
+const { getInner, trim, isAtom, getType, listify } = require("./helpers");
 const fs = require("fs");
-
-// const funcs = require("./functions");
 
 const funcs = {
   "+": (...args) => args.reduce((acc, curr) => acc + curr, 0),
@@ -26,9 +16,11 @@ const funcs = {
   car: (list) => list[0],
   cdr: ([, ...rest]) => rest || [],
   cons: (atm, list) => [atm, ...list],
-  define: () => (name, value) => {
-    globalScope[name] = value;
-  },
+  define:
+    (localScope) =>
+    ([name, value]) => {
+      localScope[name] = evaluate(value, localScope);
+    },
   cond:
     (localScope) =>
     (...args) => {
@@ -45,21 +37,13 @@ const funcs = {
       const paramNames = getInner(paramList).split(" ").map(trim);
       const thisScope = {};
       return (...params) => {
-        // let funcBody = body;
-        console.log({ localScope });
         if (params.length < paramNames.length)
           throw new Error(
             `Expected ${paramNames.length} arguments, but got ${params.length}`
           );
-        paramNames.forEach(
-          (paramName, idx) => {
-            thisScope[paramName] = params[idx];
-          }
-          // (funcBody = funcBody.replace(
-          //   new RegExp(paramName, "g"),
-          //   convertToScm(params[idx])
-          // ))
-        );
+        paramNames.forEach((paramName, idx) => {
+          thisScope[paramName] = params[idx];
+        });
 
         return evaluate(body, { ...localScope, ...thisScope });
       };
@@ -69,17 +53,11 @@ const funcs = {
 const specialFuncs = ["cond", "define", "lambda"];
 
 const evaluate = (expr, localScope = {}) => {
-  console.log(expr, localScope);
-  if (isAtom(expr)) return getType(expr, localScope);
+  if (isAtom(expr)) return localScope[expr] || getType(expr, localScope);
   const atoms = listify(expr);
-  // const localScope = {};
 
   if (atoms.length > 0) {
     const [func, ...params] = atoms;
-    if (func === "define") {
-      globalScope[params[0]] = evaluate(params[1], localScope); //evaluate(params[1]);
-      return;
-    }
     if (specialFuncs.includes(func)) {
       return funcs[func](localScope)(params);
     }
@@ -88,11 +66,6 @@ const evaluate = (expr, localScope = {}) => {
     }
     if (Object.keys(localScope).includes(func)) {
       return localScope[func](
-        ...params.map((param) => evaluate(param, localScope))
-      );
-    }
-    if (Object.keys(globalScope).includes(func)) {
-      return globalScope[func](
         ...params.map((param) => evaluate(param, localScope))
       );
     } else {
@@ -107,9 +80,11 @@ const evaluateFile = (path) => {
     encoding: "utf-8",
   });
 
+  const scope = {};
+
   const expressions = listify(`(${str})`);
   return expressions.reduce((acc, curr) => {
-    return evaluate(curr);
+    return evaluate(curr, scope);
   }, null);
 };
 
