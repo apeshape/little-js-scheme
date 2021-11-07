@@ -69,15 +69,21 @@ const isAtom = (expr) => {
   return expr.trim()[0] !== "(";
 };
 
-const getType = (atom) => {
+const getType = (atom, localScope) => {
+  if (Array.isArray(atom)) return atom;
   if (atom[0] === '"') return atom.substring(1, atom.length - 1).trim();
   if (atom[0] === "#") return atom[1] === "t";
   if (
     typeof atom === "number" ||
     (typeof atom === "string" && atom.match(/^[0-9]+$/))
-  )
+  ) {
     return Number(atom);
+  }
+  if (localScope[atom] !== undefined) return localScope[atom];
   if (globalScope[atom] !== undefined) return getType(globalScope[atom]);
+
+  // console.error("no atom", atom);
+  // throw new Error("cant find atom type");
   return atom;
 };
 
