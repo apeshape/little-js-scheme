@@ -8,7 +8,7 @@ const getInner = (str) => {
   }
 };
 
-const listify = (expr) => {
+const getParts = (expr) => {
   const inner = getInner(expr);
   const pieces = [];
   let piece = "";
@@ -59,5 +59,5 @@ module.exports = {
   getInner,
   isAtom,
   getType,
-  listify,
+  getParts,
 };

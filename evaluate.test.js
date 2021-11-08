@@ -75,7 +75,7 @@ test("Lambda with recursion", () => {
   expect(val).toStrictEqual(["kalas", "apa"]);
 });
 
-// test("Should throw func is not defined", () => {
-//   const str = `(apa 1 2 3)`;
-//   expect(evaluate(str)).toThrow();
-// });
+test("Should throw func is not defined", () => {
+  const str = `(apa 1 2 3)`;
+  expect(() => evaluate(str)).toThrow('Function "apa" is not defined');
+});

@@ -1,4 +1,4 @@
-const { getInner, trim, isAtom, getType, listify } = require("./helpers");
+const { getInner, trim, isAtom, getType, getParts } = require("./helpers");
 const fs = require("fs");
 
 const funcs = {
@@ -25,7 +25,7 @@ const funcs = {
     (localScope) =>
     (...args) => {
       for (let i = 0; i < args[0].length; i++) {
-        const [condition, body] = listify(args[0][i]);
+        const [condition, body] = getParts(args[0][i]);
         if (evaluate(condition, localScope)) {
           return evaluate(body, localScope);
         }
@@ -54,10 +54,10 @@ const specialFuncs = ["cond", "define", "lambda"];
 
 const evaluate = (expr, localScope = {}) => {
   if (isAtom(expr)) return localScope[expr] || getType(expr, localScope);
-  const atoms = listify(expr);
+  const parts = getParts(expr);
 
-  if (atoms.length > 0) {
-    const [func, ...params] = atoms;
+  if (parts.length > 0) {
+    const [func, ...params] = parts;
     if (specialFuncs.includes(func)) {
       return funcs[func](localScope)(params);
     }
@@ -72,20 +72,26 @@ const evaluate = (expr, localScope = {}) => {
       throw new Error(`Function "${func}" is not defined`);
     }
   }
-  return atoms;
+  return parts;
 };
 
 const evaluateFile = (path) => {
-  const str = fs.readFileSync(path, {
-    encoding: "utf-8",
-  });
+  try {
+    const str = fs.readFileSync(path, {
+      encoding: "utf-8",
+    });
 
-  const scope = {};
+    const scope = {};
 
-  const expressions = listify(`(${str})`);
-  return expressions.reduce((acc, curr) => {
-    return evaluate(curr, scope);
-  }, null);
+    const expressions = getParts(`(${str})`);
+    return expressions.reduce((acc, curr) => {
+      return evaluate(curr, scope);
+    }, null);
+  } catch (error) {
+    if (error.code === "ENOENT") {
+      console.log(`File '${path}' does not exist`);
+    }
+  }
 };
 
 module.exports = {
